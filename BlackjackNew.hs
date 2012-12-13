@@ -73,31 +73,75 @@ hit h p x = (newH, newP) where
                       Nine -> p+9
                       _ -> p+10
 
--- list of cards -> card count - current money -> final money made
-playGame :: [Card] -> Int -> Int -> Int
-playGame [] _ m = m -- TODO : check length here: make sure we can still play one round
-playGame l cnt m = undefined
+-- list of cards -> current money -> final money made
+playGame :: [Card] -> Int -> Int
+playGame l m = let
+                 (l', moneyMade) = roundPlay l
+                 m' = m + moneyMade
+               in 
+               if (length l)>10 then playGame l' m'
+               else m'
+
+-- card cnt -> bet
+determineBet :: Int -> Int
+determineBet cnt = case cnt of 
+                             2 -> 25
+                             3 -> 50
+                             4 -> 75
+                             5 -> 100
+                             6 -> 125
+                             7 -> 150
+                             8 -> 175
+                             9 -> 200
+                             10 -> 225
+                             otherwise -> 5
+
+getOpenCard :: [Card] -> Card
+getOpenCard (a:b:c:d) = c
+getOpenCard _ = error "how come!"
+                  
+
+getCurCnt :: [Card] -> Int
+getCurCnt d =  - sum (map countValue d)
+
+-- playScore -> dealerScore -> Bet -> money made
+findMoneyMade :: Int -> Int -> Int -> Int
+findMoneyMade ps ds bet = if ps > 21 then -bet
+                          else if ds > 21 then bet
+                               else if (ps > ds) then bet
+                                    else if (ps < ds) then -bet else 0
 
 
 
--- list of cards -> card count -> money made in this round
-roundPlay :: [Card] -> Int -> Int
-roundPlay l cnt = let
+-- list of cards-> (remainingDeck, money made in this round)
+roundPlay :: [Card] -> ([Card], Int)
+roundPlay l = let
                     initCards = take 4 l
-                    curCnt = cnt + sum (map countValue initCards)
-                    thisBet = determinBet curCnt
-                    --(newL, playerScore) = playerPlayGame (take 2 initCards) curCnt (drop 4 l) 
+                    curCnt = getCurCnt (drop 4 l)
+                    -- curCnt = cnt + sum (map countValue initCards)
+                    thisBet = determineBet curCnt
+                    dealerOpenCard = getOpenCard l
+                    (newL, playerScore) = playerPlayGame (take 2 initCards) dealerOpenCard (drop 4 l) 
                     --(newL', dealerScore) = dealerPlayGame (drop 2 initCards) newL
-                    (newL, dealerScore) = dealerPlayGame (drop 2 initCards) l
-                  in 
-                  dealerScore
+                    (newL', dealerScore) = dealerPlayGame (drop 2 initCards) newL
+                    money = findMoneyMade playerScore dealerScore thisBet
+                  in
+                  (newL', money) 
                     
--- player hand -> card count ->remaining deck -> (newRemainingDeck, playerScore)
-playerPlayGame :: [Card] -> Int -> [Card] -> ([Card], Int)
-playerPlayGame h cnt d = undefined
+-- player hand -> opencard -> remaining deck -> (newRemainingDeck, playerScore)
+playerPlayGame :: [Card] -> Card -> [Card] -> ([Card], Int)
+playerPlayGame _ _ [] = ([], 0)
+playerPlayGame h oc d = let
+                              score = handScore h
+                              ocScore = handScore [oc]
+                            in
+                            if score > 16 then (d, score)
+                            else if (score > 12) && (ocScore < 7) then (d, score)
+                                 else playerPlayGame ((head d):h) oc (tail d)
 
 -- dealer hand -> remaining deck -> (newRemainingDeck, dealerScore)
 dealerPlayGame :: [Card] -> [Card] -> ([Card], Int)
+dealerPlayGame _ [] = ([], 0)
 dealerPlayGame h d = let 
                        isHandSoft = handIsSoft h
                        score = handScore h
@@ -125,6 +169,32 @@ possibleHandTotals (card:cards) runningTotals =
   where newTotals = [total + value | total <- runningTotals, value <- cardValues card]
 
 
+--shuffleDeck :: [Card] -> [Card]
+--shuffleDeck d = undefined
+
+main = do
+         sd <- shuffleDeck 
+         let money = playGame sd 0 
+         print money
+
+
+playGames :: Int -> IO ()
+playGames 0 = print "End game"
+playGames n = do
+                sd <- shuffleDeck
+                let money = playGame sd 0
+                print money
+                playGames (n-1)
+              
+
+--main = do
+--         seed <- newStdGen
+--         let rs = randomlist 52 seed
+--         print rs
+
+
+--randomlist :: Int -> StdGen -> [Int]
+--randomlist n = take n . unfoldr (Just . random)
 
 
 {-
