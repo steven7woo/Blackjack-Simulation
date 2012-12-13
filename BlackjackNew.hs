@@ -78,11 +78,14 @@ playGame :: [Card] -> Int -> Int -> Int
 playGame [] _ m = m -- TODO : check length here: make sure we can still play one round
 playGame l cnt m = undefined
 
+
+
 -- list of cards -> card count -> money made in this round
 roundPlay :: [Card] -> Int -> Int
 roundPlay l cnt = let
                     initCards = take 4 l
                     curCnt = cnt + sum (map countValue initCards)
+                    thisBet = determinBet curCnt
                     --(newL, playerScore) = playerPlayGame (take 2 initCards) curCnt (drop 4 l) 
                     --(newL', dealerScore) = dealerPlayGame (drop 2 initCards) newL
                     (newL, dealerScore) = dealerPlayGame (drop 2 initCards) l
